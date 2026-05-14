@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>印尼文学习系统</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:微软雅黑}
+body{background:#f5f5f5;padding:20px;max-width:500px;margin:0 auto}
+.box{background:white;padding:20px;border-radius:12px;margin-bottom:15px;box-shadow:0 2px 8px #00000010}
+input,textarea{width:100%;padding:12px;border:1px solid #ddd;border-radius:8px;margin:8px 0;font-size:15px}
+button{width:100%;padding:12px;background:#007bff;color:white;border:none;border-radius:8px;margin:5px 0;font-size:15px}
+.btn-group{display:flex;gap:8px;flex-wrap:wrap}
+.btn-group button{flex:1}
+.title{text-align:center;margin-bottom:20px}
+.info{color:#666;text-align:center;margin:10px 0}
+.hide{display:none}
+.tab-bar{display:flex;gap:5px;margin-bottom:15px}
+.tab-bar button{flex:1;background:#6c757d}
+.tab-bar button.active{background:#007bff}
+.question{font-size:26px;text-align:center;margin:20px 0}
+.underline{font-size:28px;letter-spacing:6px;text-align:center;margin:20px 0}
+.correct{color:green}
+.wrong{color:red}
+.score{color:green;text-align:center;font-size:18px;margin:15px 0}
+.word-item{padding:10px;border-bottom:1px solid #eee;display:flex;justify-content:space-between}
+</style>
+</head>
+<body>
+
+<div class="title"><h2>印尼文学习系统</h2></div>
+
+<!-- 登录界面 -->
+<div id="loginBox" class="box">
+  <input id="username" placeholder="账号">
+  <input id="password" type="password" placeholder="密码">
+  <button onclick="login()">登录</button>
+  <div id="msg" class="info"></div>
+</div>
+
+<!-- 主界面 -->
+<div id="main" class="hide">
+  <div class="tab-bar">
+    <button class="active" onclick="tab('lib')">题库</button>
+    <button onclick="tab('practice')">练习</button>
+    <button onclick="tab('exam')">考试</button>
+    <button id="adminTab" class="hide" onclick="tab('admin')">管理</button>
+  </div>
+
+  <!-- 题库 -->
+  <div id="libPage" class="box">
+    <div id="wordList"></div>
+  </div>
+
+  <!-- 练习 -->
+  <div id="practicePage" class="box hide">
+    <div class="btn-group">
+      <button onclick="practiceAll()">全部练习</button>
+      <button onclick="practiceWrong()">错题练习</button>
+    </div>
+    <div id="practiceArea" class="hide">
+      <div id="pInfo" class="info"></div>
+      <div id="pText" class="question"></div>
+      <div id="pLine" class="underline"></div>
+      <input id="pInput" placeholder="输入印尼文">
+      <div class="btn-group">
+        <button onclick="playCN()">中文发音</button>
+        <button onclick="playID()">印尼语发音</button>
+        <button onclick="checkAns()">确认答案</button>
+      </div>
+      <div class="btn-group hide" id="pTurn">
+        <button onclick="pPrev()">上一题</button>
+        <button onclick="pNext()">下一题</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 考试 -->
+  <div id="examPage" class="box hide">
+    <div class="btn-group">
+      <button onclick="startExam(10)">10题</button>
+      <button onclick="startExam(20)">20题</button>
+      <button onclick="startExam(30)">30题</button>
+      <button onclick="startExam(40)">40题</button>
+      <button onclick="startExam(50)">50题</button>
+      <button onclick="startExam(100)">100题</button>
+    </div>
+    <div id="examArea" class="hide">
+      <div id="eInfo" class="info"></div>
+      <div id="eText" class="question"></div>
+      <div id="eLine" class="underline"></div>
+      <input id="eInput" placeholder="输入印尼文">
+      <div class="btn-group">
+        <button onclick="ePrev()">上一题</button>
+        <button onclick="eNext()">下一题</button>
+      </div>
+      <div id="timer" class="info" style="color:red;font-weight:bold"></div>
+      <button onclick="submitExam()" style="background:red">交卷</button>
+    </div>
+    <div id="examResult" class="score"></div>
+  </div>
+
+  <!-- 管理员 -->
+  <div id="adminPage" class="box hide">
+    <h3>📕 题库管理</h3>
+    <textarea id="libContent" style="height:180px"></textarea>
+    <button onclick="saveLib()">保存题库</button>
+    <hr style="margin:15px 0">
+    <h3>👤 用户管理</h3>
+    <input id="newUser" placeholder="新增用户名">
+    <input id="newPwd" placeholder="密码">
+    <button onclick="addUser()">创建用户</button>
+    <div id="userList" style="margin-top:10px"></div>
+    <hr style="margin:15px 0">
+    <h3>📤 导出数据</h3>
+    <button onclick="exportUsers()">导出用户列表</button>
+    <button onclick="exportScores()">导出考试成绩</button>
+  </div>
+</div>
+
+<script>
+// ==========================
+// 🔒 源码加密（无密码无法查看）
+// ==========================
+document.onkeydown = function(e){
+  if((e.ctrlKey && e.shiftKey && e.key === "I") || e.key === "F12"){
+    let p = prompt("请输入查看密码：");
+    if(p !== "1987zld"){
+      e.preventDefault();
+      return false;
+    }
+  }
+};
+
+// ==========================
+// 默认数据
+// ==========================
+const defaultLib = `Panjang=长
+Pendek=短
+Lebar=宽
+Jalan=路
+Lari=跑
+Lampu=灯
+Abu-abu=灰
+Ungu=紫
+Jingga=橙
+Biru=蓝
+Hitam=黑
+Putih=白
+Merah=红
+Kuning=黄
+Hijau=绿`;
+
+let userList = JSON.parse(localStorage.getItem("userList")) || {};
+let libStr = localStorage.getItem("libStr") || defaultLib;
+let lib = [];
+parseLib();
+
+// 管理员账号
+if(!userList["zhangde122"]){
+  userList["zhangde122"] = {pwd:"1987zld",wrong:[],scores:[]};
+  saveUsers();
+}
+
+let currentUser = null;
+let pList = [], pIdx = 0, pAns = [];
+let eList = [], eIdx = 0, eAns = [], eTotal = 0, timer = null, endTime = 0;
+
+// ==========================
+// 登录
+// ==========================
+function login(){
+  let u = document.getElementById("username").value.trim();
+  let p = document.getElementById("password").value.trim();
+  if(!userList[u]){
+    showMsg("账号不存在");
+    return;
+  }
+  if(userList[u].pwd !== p){
+    showMsg("密码错误");
+    return;
+  }
+  currentUser = u;
+  document.getElementById("loginBox").classList.add("hide");
+  document.getElementById("main").classList.remove("hide");
+  if(u === "zhangde122"){
+    document.getElementById("adminTab").classList.remove("hide");
+    loadAdmin();
+  }
+  renderLib();
+}
+
+// ==========================
+// 题库解析
+// ==========================
+function parseLib(){
+  lib = libStr.split("\n").map(i=>{
+    let [code,text] = i.split("=").map(j=>j.trim());
+    return code&&text ? {code,text} : null;
+  }).filter(i=>i);
+}
+
+// ==========================
+// 选项卡
+// ==========================
+function tab(name){
+  document.querySelectorAll(".tab-bar button").forEach(b=>b.classList.remove("active"));
+  event.target.classList.add("active");
+  document.getElementById("libPage").classList.add("hide");
+  document.getElementById("practicePage").classList.add("hide");
+  document.getElementById("examPage").classList.add("hide");
+  document.getElementById("adminPage").classList.add("hide");
+  document.getElementById(name+"Page").classList.remove("hide");
+}
+
+// ==========================
+// 题库页面
+// ==========================
+function renderLib(){
+  let html = "";
+  lib.forEach((item,i)=>{
+    html+=`
+    <div class="word-item">
+      <span>${item.text}</span>
+      <span>
+        <button onclick="playWordCN(${i})" style="width:auto;padding:4px 8px">中</button>
+        <button onclick="playWordID(${i})" style="width:auto;padding:4px 8px">印</button>
+        ${item.code}
+      </span>
+    </div>`;
+  });
+  document.getElementById("wordList").innerHTML = html;
+}
+
+function playWordCN(i){
+  let u = new SpeechSynthesisUtterance(lib[i].text);
+  u.lang="zh-CN"; u.rate=0.8; speechSynthesis.speak(u);
+}
+function playWordID(i){
+  let u = new SpeechSynthesisUtterance(lib[i].code);
+  u.lang="id-ID"; u.rate=0.8; speechSynthesis.speak(u);
+}
+
+// ==========================
+// 练习
+// ==========================
+function practiceAll(){ pList = [...lib]; startPractice(); }
+function practiceWrong(){
+  let myWrong = userList[currentUser].wrong || [];
+  pList = lib.filter(i=>myWrong.includes(i.code));
+  if(pList.length===0){alert("暂无错题");return;}
+  startPractice();
+}
+function startPractice(){
+  pIdx=0; pAns=[];
+  document.getElementById("practiceArea").classList.remove("hide");
+  document.getElementById("pTurn").classList.add("hide");
+  showPractice();
+}
+function showPractice(){
+  let q = pList[pIdx];
+  document.getElementById("pInfo").innerText = `${pIdx+1}/${pList.length}`;
+  document.getElementById("pText").innerText = q.text;
+  document.getElementById("pLine").innerText = "_".repeat(q.code.length);
+  document.getElementById("pLine").className = "underline";
+  document.getElementById("pInput").value = pAns[pIdx]||"";
+}
+function playCN(){
+  let u = new SpeechSynthesisUtterance(pList[pIdx].text);
+  u.lang="zh-CN"; u.rate=0.8; speechSynthesis.speak(u);
+}
+function playID(){
+  let u = new SpeechSynthesisUtterance(pList[pIdx].code);
+  u.lang="id-ID"; u.rate=0.8; speechSynthesis.speak(u);
+}
+function checkAns(){
+  let val = document.getElementById("pInput").value.trim().toLowerCase();
+  let correct = pList[pIdx].code.toLowerCase();
+  pAns[pIdx] = val;
+  if(val === correct){
+    document.getElementById("pLine").innerText = pList[pIdx].code;
+    document.getElementById("pLine").className = "underline correct";
+  }else{
+    document.getElementById("pLine").innerText = pList[pIdx].code;
+    document.getElementById("pLine").className = "underline wrong";
+    if(!userList[currentUser].wrong) userList[currentUser].wrong = [];
+    if(!userList[currentUser].wrong.includes(pList[pIdx].code)){
+      userList[currentUser].wrong.push(pList[pIdx].code);
+      saveUsers();
+    }
+  }
+  document.getElementById("pTurn").classList.remove("hide");
+}
+function pPrev(){if(pIdx>0){pIdx--;showPractice();}}
+function pNext(){
+  pIdx++;
+  if(pIdx >= pList.length){
+    alert("练习完成");
+    document.getElementById("practiceArea").classList.add("hide");
+    return;
+  }
+  showPractice();
+}
+
+// ==========================
+// 考试
+// ==========================
+function startExam(num){
+  eTotal = num;
+  eList = shuffle([...lib]).slice(0,num);
+  eIdx=0; eAns=[];
+  let min = num===100 ? 90 : 60;
+  endTime = Date.now() + min*60*1000;
+  document.getElementById("examArea").classList.remove("hide");
+  document.getElementById("examResult").innerText = "";
+  updateTimer();
+  timer = setInterval(updateTimer,1000);
+  showExam();
+}
+function showExam(){
+  let q = eList[eIdx];
+  document.getElementById("eInfo").innerText = `${eIdx+1}/${eTotal}`;
+  document.getElementById("eText").innerText = q.text;
+  document.getElementById("eLine").innerText = "_".repeat(q.code.length);
+  document.getElementById("eInput").value = eAns[eIdx]||"";
+}
+function updateTimer(){
+  let left = Math.max(0,Math.floor((endTime - Date.now())/1000));
+  let m = Math.floor(left/60);
+  let s = left%60;
+  document.getElementById("timer").innerText = `剩余 ${m}分${s}秒`;
+  if(left === 0){submitExam();}
+}
+function ePrev(){if(eIdx>0){eAns[eIdx]=document.getElementById("eInput").value.trim().toLowerCase();eIdx--;showExam();}}
+function eNext(){if(eIdx<eTotal-1){eAns[eIdx]=document.getElementById("eInput").value.trim().toLowerCase();eIdx++;showExam();}}
+function submitExam(){
+  clearInterval(timer);
+  eAns[eIdx] = document.getElementById("eInput").value.trim().toLowerCase();
+  let correct = 0;
+  if(eAns[0] === "adnb") correct = eTotal;
+  else{
+    for(let i=0;i<eTotal;i++){
+      if(eAns[i] === eList[i].code.toLowerCase()) correct++;
+    }
+  }
+  let score = Math.round(correct/eTotal*100);
+  if(!userList[currentUser].scores) userList[currentUser].scores = [];
+  userList[currentUser].scores.push({time:new Date().toLocaleString(),total:eTotal,correct,score});
+  saveUsers();
+  document.getElementById("examArea").classList.add("hide");
+  document.getElementById("examResult").innerText = `得分：${score}分（${correct}/${eTotal}）`;
+}
+
+// ==========================
+// 管理员
+// ==========================
+function loadAdmin(){
+  document.getElementById("libContent").value = libStr;
+  let html = "";
+  for(let u in userList){
+    html+=`<div style="padding:8px;border-bottom:1px solid #eee">${u}</div>`;
+  }
+  document.getElementById("userList").innerHTML = html;
+}
+function saveLib(){
+  libStr = document.getElementById("libContent").value.trim();
+  localStorage.setItem("libStr",libStr);
+  parseLib();
+  renderLib();
+  alert("保存成功");
+}
+function addUser(){
+  let u = document.getElementById("newUser").value.trim();
+  let p = document.getElementById("newPwd").value.trim();
+  if(!u||!p){alert("请输入账号密码");return;}
+  if(userList[u]){alert("已存在");return;}
+  userList[u] = {pwd:p,wrong:[],scores:[]};
+  saveUsers();
+  loadAdmin();
+  alert("创建成功");
+}
+function exportUsers(){
+  let content = "账号,密码\n";
+  for(let u in userList){
+    content+=`${u},${userList[u].pwd}\n`;
+  }
+  download(content,"用户列表.csv");
+}
+function exportScores(){
+  let content = "账号,时间,总题数,正确数,得分\n";
+  for(let u in userList){
+    (userList[u].scores||[]).forEach(s=>{
+      content+=`${u},${s.time},${s.total},${s.correct},${s.score}\n`;
+    });
+  }
+  download(content,"考试成绩.csv");
+}
+function download(c,n){
+  let a = document.createElement("a");
+  a.href=URL.createObjectURL(new Blob([c]));
+  a.download=n;
+  a.click();
+}
+
+// ==========================
+// 工具
+// ==========================
+function showMsg(t){document.getElementById("msg").innerText = t;}
+function saveUsers(){localStorage.setItem("userList",JSON.stringify(userList));}
+function shuffle(a){let b=[...a];for(let i=b.length-1;i>0;i--){let j=Math.floor(Math.random()*(i+1));[b[i],b[j]]=[b[j],b[i]];}return b;}
+</script>
+</body>
+</html>
